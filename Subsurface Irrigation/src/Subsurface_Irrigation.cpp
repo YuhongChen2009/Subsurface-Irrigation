@@ -66,7 +66,6 @@ int button = 12;
 // User define functions
 
 // Read the moisture sensor values and map them to a percentage (0-100)
-//TEST
 void read_value()
 {
   for (int i = 0; i < 4; i++) {
