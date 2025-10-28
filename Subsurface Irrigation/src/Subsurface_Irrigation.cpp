@@ -63,7 +63,36 @@ int pump = 4;
 // set button
 int button = 12;
 
+// logging
+const int MAX_LOG_LENGTH = 48;
+unsigned long timestamps[MAX_LOG_LENGTH];
+uint8_t log_s0[MAX_LOG_LENGTH];
+uint8_t log_s1[MAX_LOG_LENGTH];
+uint8_t log_s2[MAX_LOG_LENGTH];
+uint8_t log_s3[MAX_LOG_LENGTH];
+int log_count = 0;
+
 // User define functions
+
+// Dump all logged data in CSV format
+void dumpAll() {
+  Serial.println(F("time_ms,sensor0,sensor1,sensor2,sensor3"));
+  for (int i = 0; i < log_count; i++) {
+    Serial.print(timestamps[i]);
+    Serial.print(',');
+
+    Serial.print(log_s0[i]);
+    Serial.print(',');
+
+    Serial.print(log_s1[i]);
+    Serial.print(',');
+
+    Serial.print(log_s2[i]);
+    Serial.print(',');
+
+    Serial.println(log_s3[i]);
+  }
+}
 
 // Read the moisture sensor values and map them to a percentage (0-100)
 void read_value()
@@ -113,8 +142,10 @@ void drawValues(){
 //Water plants to certain moisture level
 void water_plant()
 {
+    int startVals[4];
   for (int i = 0; i < 4; i++) {
     int sensorValue = analogRead(A0 + i);
+    startVals[i] = sensorValue;
 
     // Convert threshold percentage to raw sensor value for this sensor
     int threshold_raw = map(
@@ -124,14 +155,12 @@ void water_plant()
       moisture_ranges[i][1]  // wet
     );
 
-    Serial.println(sensorValue);
-
     if (sensorValue > threshold_raw) { // dry
       digitalWrite(relay_pins[i], HIGH); //activate relay
       digitalWrite(pump, HIGH); //activate pump
       while (true) {
         drawValues();
-        if (sensorValue - above_buffer < threshold_raw) { // wet enough
+        if (analogRead(A0 + i) > threshold_raw) { // wet enough
           digitalWrite(relay_pins[i], LOW); //deactivate relay
           digitalWrite(pump, LOW); //deactivate pump
           break;
@@ -144,6 +173,35 @@ void water_plant()
       digitalWrite(relay_pins[i], LOW); //deactivate relay
       digitalWrite(pump, LOW); //deactivate pump
     }
+  }
+  // Log the data
+  if (log_count < MAX_LOG_LENGTH) {
+    timestamps[log_count] = millis();
+    log_s0[log_count] = map(
+      startVals[0],
+      moisture_ranges[0][0], // dry
+      moisture_ranges[0][1], // wet
+      0, 100
+    );
+    log_s1[log_count] = map(
+      startVals[1],
+      moisture_ranges[1][0], // dry
+      moisture_ranges[1][1], // wet
+      0, 100
+    );
+    log_s2[log_count] = map(
+      startVals[2],
+      moisture_ranges[2][0], // dry
+      moisture_ranges[2][1], // wet
+      0, 100
+    );
+    log_s3[log_count] = map(
+      startVals[3],
+      moisture_ranges[3][0], // dry
+      moisture_ranges[3][1], // wet
+      0, 100
+    );
+    log_count++;
   }
 }
 
@@ -183,5 +241,18 @@ void loop()
   digitalWrite(pump, LOW);
   u8g.sleepOn();
   delay(50);
+  if (Serial){
+    while (true) {
+      if (Serial.available()) {
+        char c = Serial.read();
+        if (c == 'D' || c == 'd') {
+          dumpAll();
+        }
+      }
+      delay(100);
+      if (!Serial) break;
+    }
+  }
+  
   sleepMinutes(30);
 }
