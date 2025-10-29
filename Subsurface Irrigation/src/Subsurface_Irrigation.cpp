@@ -234,15 +234,12 @@ void setup()
 void loop()
 {
   u8g.sleepOff();
-  drawValues();
+  unsigned long startTime = millis();
   water_plant();
-  //Prepare for sleep
-  for (int i = 0; i < 4; i++) digitalWrite(relay_pins[i], LOW);
-  digitalWrite(pump, LOW);
-  u8g.sleepOn();
-  delay(50);
-  if (Serial){
-    while (true) {
+  while (millis() - startTime < (10 * 60UL * 1000UL)) { // 10 minutes
+    drawValues();
+    delay(500);
+    if (Serial){
       if (Serial.available()) {
         char c = Serial.read();
         if (c == 'D' || c == 'd') {
@@ -253,6 +250,11 @@ void loop()
       if (!Serial) break;
     }
   }
-  
-  sleepMinutes(30);
+  drawValues();
+  //Prepare for sleep
+  for (int i = 0; i < 4; i++) digitalWrite(relay_pins[i], LOW);
+  digitalWrite(pump, LOW);
+  u8g.sleepOn();
+  delay(50);
+  sleepMinutes(20);
 }
