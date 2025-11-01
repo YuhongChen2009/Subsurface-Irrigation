@@ -43,19 +43,24 @@ int moisture_values[4];
 // set water relays
 int relay_pins[4] = {6, 8, 9, 10};
 
-// Moisture sensor ranges: {dry, wet}
+// Moisture sensor ranges: {dry, wet} (subsurface)
 int moisture_ranges[4][2] = {
   {600, 466}, // Sensor 0
-  {612, 450}, // Sensor 1
-  {608, 480}, // Sensor 2
-  {620, 469}  // Sensor 3
+  {612, 430}, // Sensor 1
+  {608, 445}, // Sensor 2
+  {620, 447}  // Sensor 3
 };
 
-// set watering thresholds as percentage
-int thresholds[4] = {20, 20, 20, 20};
+// // Moisture sensor ranges: {dry, wet} (above surface)
+// int moisture_ranges[4][2] = {
+//   {600, 454}, // Sensor 0
+//   {612, 435}, // Sensor 1
+//   {608, 410}, // Sensor 2
+//   {620, 395}  // Sensor 3
+// };
 
-int sub_buffer = 50;
-int above_buffer = 75;
+// set watering thresholds as percentage
+int thresholds[4] = {40, 40, 40, 40};
 
 // set water pump
 int pump = 4;
@@ -104,10 +109,7 @@ void read_value()
       moisture_ranges[i][1], // wet
       0, 100
     );
-    Serial.print(analogRead(A0 + i));
-    Serial.print(" ");
   }
-  Serial.println();
 }
 
 // Display sensor readings on the screen
@@ -155,12 +157,19 @@ void water_plant()
       moisture_ranges[i][1]  // wet
     );
 
+    int stop_threshold = map(
+      thresholds[i] + 15, // hysteresis
+      0, 100,
+      moisture_ranges[i][0], // dry
+      moisture_ranges[i][1]  // wet
+    );
+
     if (sensorValue > threshold_raw) { // dry
       digitalWrite(relay_pins[i], HIGH); //activate relay
       digitalWrite(pump, HIGH); //activate pump
       while (true) {
         drawValues();
-        if (analogRead(A0 + i) > threshold_raw) { // wet enough
+        if (analogRead(A0 + i) < stop_threshold) { // wet enough
           digitalWrite(relay_pins[i], LOW); //deactivate relay
           digitalWrite(pump, LOW); //deactivate pump
           break;
