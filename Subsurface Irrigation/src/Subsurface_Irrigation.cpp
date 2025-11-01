@@ -30,6 +30,11 @@ void water_plant();
  */
 void sleepMinutes(int minutes);
 
+/**
+ * @brief Dumps all logged data in CSV format to the serial monitor.
+ */
+void dumpAll();
+
 #include <Arduino.h>
 #include <Wire.h>
 #include "U8glib.h"
