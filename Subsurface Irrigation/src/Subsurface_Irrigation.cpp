@@ -96,6 +96,11 @@ void dumpAll() {
     Serial.print(',');
 
     Serial.println(log_s3[i]);
+
+    log_s0[i] = 0;
+    log_s1[i] = 0;
+    log_s2[i] = 0;
+    log_s3[i] = 0;
   }
 }
 
