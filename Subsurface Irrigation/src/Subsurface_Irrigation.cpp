@@ -49,23 +49,23 @@ int moisture_values[4];
 int relay_pins[4] = {6, 8, 9, 10};
 
 // Moisture sensor ranges: {dry, wet} (subsurface)
-int moisture_ranges[4][2] = {
-  {600, 466}, // Sensor 0
-  {612, 430}, // Sensor 1
-  {608, 445}, // Sensor 2
-  {620, 447}  // Sensor 3
-};
-
-// // Moisture sensor ranges: {dry, wet} (above surface)
 // int moisture_ranges[4][2] = {
-//   {600, 454}, // Sensor 0
-//   {612, 435}, // Sensor 1
-//   {608, 410}, // Sensor 2
-//   {620, 395}  // Sensor 3
+//   {578, 466}, // Sensor 0
+//   {570, 430}, // Sensor 1
+//   {575, 445}, // Sensor 2
+//   {577, 447}  // Sensor 3
 // };
 
+// // Moisture sensor ranges: {dry, wet} (above surface)
+int moisture_ranges[4][2] = {
+  {660, 454}, // Sensor 0
+  {630, 435}, // Sensor 1
+  {628, 410}, // Sensor 2
+  {622, 395}  // Sensor 3
+};
+
 // set watering thresholds as percentage
-int thresholds[4] = {40, 40, 40, 40};
+int thresholds[4] = {20, 20, 20, 20};
 
 // set water pump
 int pump = 4;
@@ -81,6 +81,8 @@ uint8_t log_s1[MAX_LOG_LENGTH];
 uint8_t log_s2[MAX_LOG_LENGTH];
 uint8_t log_s3[MAX_LOG_LENGTH];
 int log_count = 0;
+
+int water_count = 0;
 
 // User define functions
 
@@ -107,6 +109,8 @@ void dumpAll() {
     log_s2[i] = 0;
     log_s3[i] = 0;
   }
+  Serial.println(water_count);
+  water_count = 0;
 }
 
 // Read the moisture sensor values and map them to a percentage (0-100)
@@ -119,6 +123,7 @@ void read_value()
       moisture_ranges[i][1], // wet
       0, 100
     );
+    // moisture_values[i] = analogRead(A0 + i);
   }
 }
 
@@ -141,8 +146,8 @@ void drawValues(){
 
       // Draw moisture value above the port number
       int shown = moisture_values[i];
-      if (shown < 0)   shown = 0;
-      if (shown > 100) shown = 100;
+      // if (shown < 0)   shown = 0;
+      // if (shown > 100) shown = 100;
       char buf[5];
       itoa(shown, buf, 10);
       u8g.setPrintPos(baseX[i] + 9, valueY);
@@ -154,7 +159,7 @@ void drawValues(){
 //Water plants to certain moisture level
 void water_plant()
 {
-    int startVals[4];
+  int startVals[4];
   for (int i = 0; i < 4; i++) {
     int sensorValue = analogRead(A0 + i);
     startVals[i] = sensorValue;
@@ -167,28 +172,11 @@ void water_plant()
       moisture_ranges[i][1]  // wet
     );
 
-    int stop_threshold = map(
-      thresholds[i] + 15, // hysteresis
-      0, 100,
-      moisture_ranges[i][0], // dry
-      moisture_ranges[i][1]  // wet
-    );
-
     if (sensorValue > threshold_raw) { // dry
+      water_count++;
       digitalWrite(relay_pins[i], HIGH); //activate relay
       digitalWrite(pump, HIGH); //activate pump
-      while (true) {
-        drawValues();
-        if (analogRead(A0 + i) < stop_threshold) { // wet enough
-          digitalWrite(relay_pins[i], LOW); //deactivate relay
-          digitalWrite(pump, LOW); //deactivate pump
-          break;
-        }
-        sensorValue = analogRead(A0 + i);
-        delay(500);
-      }
-    }
-    else {
+      delay(500);
       digitalWrite(relay_pins[i], LOW); //deactivate relay
       digitalWrite(pump, LOW); //deactivate pump
     }
