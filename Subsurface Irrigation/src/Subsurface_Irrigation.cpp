@@ -176,10 +176,10 @@ void water_plant()
       water_count++;
       digitalWrite(relay_pins[i], HIGH); //activate relay
       digitalWrite(pump, HIGH); //activate pump
-      delay(500);
+      delay(1000);
       digitalWrite(relay_pins[i], LOW); //deactivate relay
-      digitalWrite(pump, LOW); //deactivate pump
     }
+    digitalWrite(pump, LOW); //deactivate pump
   }
   // Log the data
   if (log_count < MAX_LOG_LENGTH) {
@@ -235,7 +235,7 @@ void setup()
   pinMode(pump, OUTPUT);
   // declare switch as input
   pinMode(button, INPUT);
-  digitalWrite(pump, HIGH);
+  digitalWrite(pump, LOW);
 }
 
 void loop()
@@ -257,7 +257,6 @@ void loop()
       if (!Serial) break;
     }
   }
-  drawValues();
   //Prepare for sleep
   for (int i = 0; i < 4; i++) digitalWrite(relay_pins[i], LOW);
   digitalWrite(pump, LOW);
