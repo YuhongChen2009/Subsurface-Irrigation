@@ -74,7 +74,7 @@ int pump = 4;
 int button = 12;
 
 // logging
-const int MAX_LOG_LENGTH = 48;
+const int MAX_LOG_LENGTH = 72;
 unsigned long timestamps[MAX_LOG_LENGTH];
 uint8_t log_s0[MAX_LOG_LENGTH];
 uint8_t log_s1[MAX_LOG_LENGTH];
