@@ -49,20 +49,20 @@ int moisture_values[4];
 int relay_pins[4] = {6, 8, 9, 10};
 
 // Moisture sensor ranges: {dry, wet} (subsurface)
-// int moisture_ranges[4][2] = {
-//   {578, 466}, // Sensor 0
-//   {570, 430}, // Sensor 1
-//   {575, 445}, // Sensor 2
-//   {577, 447}  // Sensor 3
-// };
+int moisture_ranges[4][2] = {
+  {578, 466}, // Sensor 0
+  {570, 430}, // Sensor 1
+  {575, 445}, // Sensor 2
+  {577, 447}  // Sensor 3
+};
 
 // // Moisture sensor ranges: {dry, wet} (above surface)
-int moisture_ranges[4][2] = {
-  {660, 454}, // Sensor 0
-  {630, 435}, // Sensor 1
-  {628, 410}, // Sensor 2
-  {622, 395}  // Sensor 3
-};
+// int moisture_ranges[4][2] = {
+//   {660, 454}, // Sensor 0
+//   {630, 435}, // Sensor 1
+//   {628, 410}, // Sensor 2
+//   {622, 395}  // Sensor 3
+// };
 
 // set watering thresholds as percentage
 int thresholds[4] = {20, 20, 20, 20};
@@ -108,6 +108,7 @@ void dumpAll() {
     log_s1[i] = 0;
     log_s2[i] = 0;
     log_s3[i] = 0;
+    timestamps[i] = 0;
   }
   Serial.println(water_count);
   water_count = 0;
@@ -176,7 +177,7 @@ void water_plant()
       water_count++;
       digitalWrite(relay_pins[i], HIGH); //activate relay
       digitalWrite(pump, HIGH); //activate pump
-      delay(1000);
+      delay(500);
       digitalWrite(relay_pins[i], LOW); //deactivate relay
     }
     digitalWrite(pump, LOW); //deactivate pump
