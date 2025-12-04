@@ -65,7 +65,7 @@ int moisture_ranges[4][2] = {
 // };
 
 // set watering thresholds as percentage
-int thresholds[4] = {20, 20, 20, 20};
+int thresholds[4] = {40, 40, 40, 40};
 
 // set water pump
 int pump = 4;
@@ -147,7 +147,7 @@ void drawValues(){
 
       // Draw moisture value above the port number
       int shown = moisture_values[i];
-      // if (shown < 0)   shown = 0;
+      if (shown < 0)   shown = 0;
       // if (shown > 100) shown = 100;
       char buf[5];
       itoa(shown, buf, 10);
@@ -172,6 +172,10 @@ void water_plant()
       moisture_ranges[i][0], // dry
       moisture_ranges[i][1]  // wet
     );
+    Serial.print("Sensor ");Serial.print(i);
+    Serial.print(" value: ");Serial.print(sensorValue);
+    Serial.print(" | Threshold (raw): ");
+    Serial.println(threshold_raw);
 
     if (sensorValue > threshold_raw) { // dry
       water_count++;
@@ -181,6 +185,7 @@ void water_plant()
       digitalWrite(relay_pins[i], LOW); //deactivate relay
     }
     digitalWrite(pump, LOW); //deactivate pump
+    digitalWrite(relay_pins[i], LOW); //ensure relay is off
   }
   // Log the data
   if (log_count < MAX_LOG_LENGTH) {
@@ -243,6 +248,10 @@ void loop()
 {
   u8g.sleepOff();
   unsigned long startTime = millis();
+  for (int i = 0; i < 4; i++) {
+    digitalWrite(relay_pins[i], LOW);
+  }
+  delay(500);
   water_plant();
   while (millis() - startTime < (10 * 60UL * 1000UL)) { // 10 minutes
     drawValues();
