@@ -48,24 +48,24 @@ int moisture_values[4];
 // set water relays
 int relay_pins[4] = {6, 8, 9, 10};
 
-// Moisture sensor ranges: {dry, wet} (subsurface)
-int moisture_ranges[4][2] = {
-  {578, 466}, // Sensor 0
-  {570, 430}, // Sensor 1
-  {575, 445}, // Sensor 2
-  {577, 447}  // Sensor 3
-};
-
-// // Moisture sensor ranges: {dry, wet} (above surface)
+// // Moisture sensor ranges: {dry, wet} (subsurface)
 // int moisture_ranges[4][2] = {
-//   {660, 454}, // Sensor 0
-//   {630, 435}, // Sensor 1
-//   {628, 410}, // Sensor 2
-//   {622, 395}  // Sensor 3
+//   {578, 466}, // Sensor 0
+//   {570, 430}, // Sensor 1
+//   {575, 445}, // Sensor 2
+//   {577, 447}  // Sensor 3
 // };
 
+// Moisture sensor ranges: {dry, wet} (above surface)
+int moisture_ranges[4][2] = {
+  {660, 454}, // Sensor 0
+  {630, 435}, // Sensor 1
+  {628, 410}, // Sensor 2
+  {622, 395}  // Sensor 3
+};
+
 // set watering thresholds as percentage
-int thresholds[4] = {40, 40, 40, 40};
+int thresholds[4] = {50, 50, 50, 50};
 
 // set water pump
 int pump = 4;
