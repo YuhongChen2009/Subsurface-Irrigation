@@ -1,17 +1,3 @@
-/**
- * @file main.cpp
- * @brief Subsurface Irrigation System using Arduino and OLED Display
- * 
- * This program reads moisture levels from sensors, displays the values on an OLED screen,
- * and controls water relays and a pump based on the moisture levels. It also includes a button
- * to toggle the display between sensor values and a default message.
- * 
- * @author Yuhon
- * @date 2023
- */
- /**
- * @brief Reads moisture sensor values and maps them to a percentage (0-100).
- */
 void read_value();
 /**
  * @brief Draws the moisture sensor values on the OLED display.
