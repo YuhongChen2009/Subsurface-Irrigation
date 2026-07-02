@@ -180,7 +180,7 @@ void drawValues(){
       u8g.print(i);
       // Draw moisture value above the port number
       int shown = moisture_values[i];
-      // if (shown < 0)   shown = 0;
+      if (shown < 0)   shown = 0;
       // if (shown > 100) shown = 100;
       char buf[5];
       itoa(shown, buf, 10);
@@ -213,6 +213,7 @@ void water_plant()
       digitalWrite(relay_pins[i], LOW); //deactivate relay
     }
     digitalWrite(pump, LOW); //deactivate pump
+    digitalWrite(relay_pins[i], LOW); //ensure relay is off
   }
   // Log the data
   if (log_count < MAX_LOG_LENGTH) {
@@ -278,6 +279,10 @@ void loop()
   // so we don't start with stale readings from 20 minutes ago.
   initSmoothedValues();
   unsigned long startTime = millis();
+  for (int i = 0; i < 4; i++) {
+    digitalWrite(relay_pins[i], LOW);
+  }
+  delay(500);
   water_plant();
   while (millis() - startTime < (10 * 60UL * 1000UL)) { // 10 minutes
     drawValues();
