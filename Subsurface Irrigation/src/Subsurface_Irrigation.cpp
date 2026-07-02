@@ -9,45 +9,48 @@
  * @author Yuhon
  * @date 2023
  */
-
  /**
  * @brief Reads moisture sensor values and maps them to a percentage (0-100).
  */
 void read_value();
-
 /**
  * @brief Draws the moisture sensor values on the OLED display.
  */
 void drawValues();
-
 /**
  * @brief Controls the watering process for the plants.
  */
 void water_plant();
-
 /**
  * @brief Puts the system to sleep for a specified number of minutes.
  */
 void sleepMinutes(int minutes);
-
 /**
  * @brief Dumps all logged data in CSV format to the serial monitor.
  */
 void dumpAll();
-
+/**
+ * @brief Reads a sensor multiple times, discards the highest and lowest readings,
+ * and returns the average of the remaining readings to filter out noise.
+ */
+int readSensorSmoothed(int pin);
+/**
+ * @brief Initializes the smoothed values array with current readings.
+ */
+void initSmoothedValues();
+/**
+ * @brief Updates the smoothed values using an Exponential Moving Average (EMA).
+ */
+void updateSmoothedValues();
 #include <Arduino.h>
 #include <Wire.h>
 #include "U8glib.h"
 #include <LowPower.h>
-
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);
-
 // array to store mapped moisture values
 int moisture_values[4];
-
 // set water relays
 int relay_pins[4] = {6, 8, 9, 10};
-
 // Moisture sensor ranges: {dry, wet} (subsurface)
 int moisture_ranges[4][2] = {
   {578, 466}, // Sensor 0
@@ -55,7 +58,6 @@ int moisture_ranges[4][2] = {
   {575, 445}, // Sensor 2
   {577, 447}  // Sensor 3
 };
-
 // // Moisture sensor ranges: {dry, wet} (above surface)
 // int moisture_ranges[4][2] = {
 //   {660, 454}, // Sensor 0
@@ -63,16 +65,15 @@ int moisture_ranges[4][2] = {
 //   {628, 410}, // Sensor 2
 //   {622, 395}  // Sensor 3
 // };
-
 // set watering thresholds as percentage
 int thresholds[4] = {20, 20, 20, 20};
-
 // set water pump
 int pump = 4;
-
 // set button
 int button = 12;
-
+// Smoothing configuration
+const float EMA_ALPHA = 0.15;        // Weight for new reading (0.0 to 1.0). Slower soil changes benefit from a lower value.
+float smoothed_moisture_raw[4];     // Stores raw EMA filtered values
 // logging
 const int MAX_LOG_LENGTH = 72;
 unsigned long timestamps[MAX_LOG_LENGTH];
@@ -81,29 +82,21 @@ uint8_t log_s1[MAX_LOG_LENGTH];
 uint8_t log_s2[MAX_LOG_LENGTH];
 uint8_t log_s3[MAX_LOG_LENGTH];
 int log_count = 0;
-
 int water_count = 0;
-
 // User define functions
-
 // Dump all logged data in CSV format
 void dumpAll() {
   Serial.println(F("time_ms,sensor0,sensor1,sensor2,sensor3"));
   for (int i = 0; i < log_count; i++) {
     Serial.print(timestamps[i]);
     Serial.print(',');
-
     Serial.print(log_s0[i]);
     Serial.print(',');
-
     Serial.print(log_s1[i]);
     Serial.print(',');
-
     Serial.print(log_s2[i]);
     Serial.print(',');
-
     Serial.println(log_s3[i]);
-
     log_s0[i] = 0;
     log_s1[i] = 0;
     log_s2[i] = 0;
@@ -113,13 +106,56 @@ void dumpAll() {
   Serial.println(water_count);
   water_count = 0;
 }
-
+// Reads a sensor multiple times, discards outliers, and returns the average of the rest
+int readSensorSmoothed(int pin) {
+  const int NUM_READINGS = 8;
+  int readings[NUM_READINGS];
+  
+  // Take multiple readings with a brief delay for signal stabilization
+  for (int i = 0; i < NUM_READINGS; i++) {
+    readings[i] = analogRead(pin);
+    delay(5);
+  }
+  
+  // Bubble sort to order the readings
+  for (int i = 0; i < NUM_READINGS - 1; i++) {
+    for (int j = 0; j < NUM_READINGS - i - 1; j++) {
+      if (readings[j] > readings[j + 1]) {
+        int temp = readings[j];
+        readings[j] = readings[j + 1];
+        readings[j + 1] = temp;
+      }
+    }
+  }
+  
+  // Average the middle 4 readings (discard the 2 lowest and 2 highest outliers)
+  long sum = 0;
+  for (int i = 2; i < NUM_READINGS - 2; i++) {
+    sum += readings[i];
+  }
+  
+  return sum / (NUM_READINGS - 4);
+}
+// Initialize the smoothed values array with fresh, outlier-filtered readings
+void initSmoothedValues() {
+  for (int i = 0; i < 4; i++) {
+    smoothed_moisture_raw[i] = readSensorSmoothed(A0 + i);
+  }
+}
+// Update the smoothed values using an Exponential Moving Average (EMA)
+void updateSmoothedValues() {
+  for (int i = 0; i < 4; i++) {
+    int raw_reading = readSensorSmoothed(A0 + i);
+    smoothed_moisture_raw[i] = (EMA_ALPHA * raw_reading) + ((1.0 - EMA_ALPHA) * smoothed_moisture_raw[i]);
+  }
+}
 // Read the moisture sensor values and map them to a percentage (0-100)
 void read_value()
 {
+  updateSmoothedValues();
   for (int i = 0; i < 4; i++) {
     moisture_values[i] = map(
-      analogRead(A0 + i),
+      (int)smoothed_moisture_raw[i],
       moisture_ranges[i][0], // dry
       moisture_ranges[i][1], // wet
       0, 100
@@ -127,24 +163,21 @@ void read_value()
     // moisture_values[i] = analogRead(A0 + i);
   }
 }
-
 // Display sensor readings on the screen
 void drawValues(){
+  // Read and update the smoothed values once per frame before entering the drawing loop
+  read_value();
   u8g.firstPage();
   do
   {
     const int baseX[4] = {0, 32, 64, 96};
     const int labelY   = 60;
     const int valueY   = 40;
-
-    read_value();
     u8g.setFont(u8g_font_7x14);
-
     for (int i = 0; i < 4; i++) {
       // Draw port number
       u8g.setPrintPos(baseX[i] + 9, labelY);
       u8g.print(i);
-
       // Draw moisture value above the port number
       int shown = moisture_values[i];
       // if (shown < 0)   shown = 0;
@@ -156,15 +189,15 @@ void drawValues(){
     }
   } while ( u8g.nextPage() );
 }
-
 //Water plants to certain moisture level
 void water_plant()
 {
   int startVals[4];
+  // Ensure we update and get fresh smoothed values after wake-up/init
+  updateSmoothedValues();
   for (int i = 0; i < 4; i++) {
-    int sensorValue = analogRead(A0 + i);
+    int sensorValue = (int)smoothed_moisture_raw[i];
     startVals[i] = sensorValue;
-
     // Convert threshold percentage to raw sensor value for this sensor
     int threshold_raw = map(
       thresholds[i],
@@ -172,7 +205,6 @@ void water_plant()
       moisture_ranges[i][0], // dry
       moisture_ranges[i][1]  // wet
     );
-
     if (sensorValue > threshold_raw) { // dry
       water_count++;
       digitalWrite(relay_pins[i], HIGH); //activate relay
@@ -212,7 +244,6 @@ void water_plant()
     log_count++;
   }
 }
-
 //Sleep for a certain number of minutes
 void sleepMinutes(int minutes) {
   uint32_t cycles = ((uint32_t)minutes * 60UL) / 8UL;
@@ -220,7 +251,6 @@ void sleepMinutes(int minutes) {
     LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
   }
 }
-
 void setup()
 {
   delay(1500);
@@ -237,11 +267,16 @@ void setup()
   // declare switch as input
   pinMode(button, INPUT);
   digitalWrite(pump, LOW);
+  // Initialize our smoothed sensor values immediately on startup
+  initSmoothedValues();
 }
-
 void loop()
 {
   u8g.sleepOff();
+  
+  // Re-initialize/refresh smoothed values immediately after waking up
+  // so we don't start with stale readings from 20 minutes ago.
+  initSmoothedValues();
   unsigned long startTime = millis();
   water_plant();
   while (millis() - startTime < (10 * 60UL * 1000UL)) { // 10 minutes
